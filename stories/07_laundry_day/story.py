@@ -57,6 +57,40 @@ class HandRinse(LaundryChoice):  # Siblings show hierarchical inheritance.
         return 4
 
 
+
+
+# Foundation 1: A new quantity-based laundry choice
+# DuvetWash inherits the common features of LaundryChoice.
+class DuvetWash(LaundryChoice):
+
+    # The constructor receives the number of duvets to wash.
+    def __init__(self, duvets):
+
+        # Check that the quantity is an integer, not a Boolean,
+        # and greater than zero.
+        if (
+            not isinstance(duvets, int)
+            or isinstance(duvets, bool)
+            or duvets <= 0
+        ):
+            # Stop object creation if the quantity is invalid.
+            raise ValueError(
+                "Duvets must be a positive whole number."
+            )
+
+        # Call the parent constructor to set the laundry choice's name.
+        super().__init__("Duvet wash")
+
+        # Store the number of duvets in this object.
+        self.duvets = duvets
+
+    # Calculate the water needed to wash the duvets.
+    def water_needed(self):
+        # Each duvet requires 8 litres of water.
+        return self.duvets * 8
+
+
+
 class EcoWash(MachineWash):  # A third level in the same family.
     def __init__(self, kilograms=2):
         super().__init__(kilograms)
