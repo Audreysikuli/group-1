@@ -92,18 +92,6 @@ class SunDry:  # No shared parent: callers use its matching behaviour.
         return "Sun drying: 0 litres in this classroom model."
 
 
-class LaundryChoiceError(Exception):
-    pass
-
-
-class LaundryRequestError(Exception):
-    pass
-
-
-class LaundryResourceError(Exception):
-    pass
-
-
 # ACT 4: The coordinator HAS-A resource, and USES-A chosen object.
 class LaundrySession:
     def __init__(self, student, amount):
@@ -124,22 +112,6 @@ class LaundrySession:
             self._entries.append({"choice": choice, "cost": needed})
             return f"{self.student} completes {choice.name}: {needed:,} litres."
         return f"Not enough litres for {choice.name}. Nothing recorded."
-
-
-class StrictLaundrySession(LaundrySession):
-    def safe_book(self, choice):
-        if choice is None:
-            raise LaundryChoiceError("A laundry choice is required.")
-
-        needed = choice.water_needed()
-        if not isinstance(needed, int) or isinstance(needed, bool) or needed < 0:
-            raise LaundryRequestError("The water requirement must be a non-negative whole number.")
-        if needed > self.water.remaining:
-            raise LaundryResourceError(
-                f"This choice needs {needed} litres, but only {self.water.remaining} remain."
-            )
-
-        return self.book(choice)
 
 
 def show_choices(choices):
