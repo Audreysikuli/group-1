@@ -8,15 +8,85 @@ from story import (
 	FeaturedEcoWash,
 	HandRinse,
 	LaundryChoice,
+	LaundryChoiceError,
+	LaundryRequestError,
+	LaundryResourceError,
 	LaundrySession,
 	MachineWash,
 	SunDry,
+	StrictLaundrySession,
 	show_choices,
 )
 
 
 def history_labels(session):
 	return [entry["choice"].name for entry in session._entries]
+
+
+class NegativeQuoteChoice:
+	name = "Negative quote"
+
+	def water_needed(self):
+		return -1
+
+
+def session_state(session):
+	return session.water.remaining, session.completed_count
+
+
+def check_strict_booking():
+	session = StrictLaundrySession("B33235", 8)
+
+	before = session_state(session)
+	try:
+		session.safe_book(None)
+	except LaundryChoiceError:
+		pass
+	else:
+		raise AssertionError("A missing choice should raise LaundryChoiceError.")
+	assert session_state(session) == before
+
+	before = session_state(session)
+	try:
+		session.safe_book(NegativeQuoteChoice())
+	except LaundryRequestError:
+		pass
+	else:
+		raise AssertionError("A negative quote should raise LaundryRequestError.")
+	assert session_state(session) == before
+
+	before = session_state(session)
+	try:
+		session.safe_book(MachineWash(2))
+	except LaundryResourceError:
+		pass
+	else:
+		raise AssertionError("An unaffordable choice should raise LaundryResourceError.")
+	assert session_state(session) == before
+
+	before = session_state(session)
+	zero_result = session.safe_book(SunDry())
+	assert zero_result == "B33235 completes Sun drying: 0 litres."
+	assert session_state(session) == (before[0], before[1] + 1)
+
+	affordable_result = session.safe_book(HandRinse("Hand rinse"))
+	assert affordable_result == "B33235 completes Hand rinse: 4 litres."
+	assert session_state(session) == (4, 2)
+
+
+def show_safe_booking(session, choice, label):
+	try:
+		result = session.safe_book(choice)
+	except LaundryChoiceError as error:
+		print(f"{label}: Please choose a laundry option. ({error})")
+	except LaundryRequestError as error:
+		print(f"{label}: The request is invalid. ({error})")
+	except LaundryResourceError as error:
+		print(f"{label}: There is not enough water. ({error})")
+	else:
+		print(f"{label}: {result}")
+	finally:
+		print(f"{label} attempt complete.")
 
 
 airer = ClothesAirer()
@@ -99,3 +169,12 @@ with TemporaryDirectory() as directory:
 
 print(f"Completed: {restored.completed_count}")
 print(f"Remaining water: {restored.water.remaining} litres")
+
+check_strict_booking()
+print("\nStrict booking checks passed.")
+strict_session = StrictLaundrySession("B33235", 8)
+show_safe_booking(strict_session, None, "Missing choice")
+show_safe_booking(strict_session, NegativeQuoteChoice(), "Invalid quote")
+show_safe_booking(strict_session, MachineWash(2), "Insufficient water")
+show_safe_booking(strict_session, SunDry(), "Zero-cost choice")
+show_safe_booking(strict_session, HandRinse("Hand rinse"), "Affordable choice")
