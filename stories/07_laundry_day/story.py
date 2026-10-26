@@ -2,6 +2,7 @@
 Run: python3 story.py. All numbers and events are invented for learning.
 """
 from abc import ABC, abstractmethod
+import json
 
 
 # ACT 1: The resource owns its value and the rules for changing it.
@@ -113,6 +114,119 @@ class LaundrySession:
     @property
     def completed_count(self):
         return len(self._entries)  # Read-only: it reflects actual history.
+
+    @staticmethod
+    def _choice_to_data(choice):
+        choice_type = type(choice)
+        if choice_type is MachineWash:
+            kind = "machine_wash"
+            extra = {"kilograms": choice.kilograms}
+        elif choice_type is HandRinse:
+            kind = "hand_rinse"
+            extra = {}
+        elif choice_type is EcoWash:
+            kind = "eco_wash"
+            extra = {"kilograms": choice.kilograms}
+        elif choice_type is FeaturedEcoWash:
+            kind = "featured_eco_wash"
+            extra = {"kilograms": choice.kilograms}
+        elif choice_type is SunDry:
+            kind = "sun_dry"
+            extra = {}
+        elif choice_type is ClothesAirer:
+            kind = "clothes_airer"
+            extra = {}
+        else:
+            raise ValueError(f"Unsupported laundry choice type: {choice_type.__name__}.")
+
+        if not isinstance(choice.name, str):
+            raise ValueError("Choice names must be strings to save a session.")
+        return {"type": kind, "name": choice.name, **extra}
+
+    @staticmethod
+    def _choice_from_data(data):
+        if not isinstance(data, dict) or not isinstance(data.get("type"), str):
+            raise ValueError("Each saved choice must be an object with a type label.")
+
+        kind = data["type"]
+        quantity_types = {
+            "machine_wash": MachineWash,
+            "eco_wash": EcoWash,
+            "featured_eco_wash": FeaturedEcoWash,
+        }
+        simple_types = {
+            "hand_rinse": HandRinse,
+            "sun_dry": SunDry,
+            "clothes_airer": ClothesAirer,
+        }
+        if kind in quantity_types:
+            if set(data) != {"type", "name", "kilograms"}:
+                raise ValueError(f"Saved {kind} choice has invalid fields.")
+            kilograms = data["kilograms"]
+            if not isinstance(kilograms, int) or isinstance(kilograms, bool) or kilograms <= 0:
+                raise ValueError("Saved kilograms must be a positive whole number.")
+            choice = quantity_types[kind](kilograms)
+        elif kind in simple_types:
+            if set(data) != {"type", "name"}:
+                raise ValueError(f"Saved {kind} choice has invalid fields.")
+            choice = simple_types[kind]() if kind != "hand_rinse" else HandRinse(data["name"])
+        else:
+            raise ValueError(f"Unknown saved laundry choice type: {kind}.")
+
+        if not isinstance(data["name"], str):
+            raise ValueError("Saved choice names must be strings.")
+        choice.name = data["name"]
+        return choice
+
+    def save_json(self, path):
+        if not isinstance(self.student, str):
+            raise ValueError("Student names must be strings to save a session.")
+        remaining = self.water.remaining
+        if not isinstance(remaining, int) or isinstance(remaining, bool) or remaining < 0:
+            raise ValueError("Remaining litres must be a non-negative whole number to save a session.")
+
+        entries = []
+        for entry in self._entries:
+            cost = entry["cost"]
+            if not isinstance(cost, int) or isinstance(cost, bool) or cost < 0:
+                raise ValueError("Saved costs must be non-negative whole numbers.")
+            entries.append({"choice": self._choice_to_data(entry["choice"]), "cost": cost})
+
+        data = {"student": self.student, "remaining": remaining, "entries": entries}
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(data, file, indent=2)
+
+    @classmethod
+    def load_json(cls, path):
+        try:
+            with open(path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+        except json.JSONDecodeError as error:
+            raise ValueError("Session file contains malformed JSON.") from error
+
+        if not isinstance(data, dict) or set(data) != {"student", "remaining", "entries"}:
+            raise ValueError("Session data must contain student, remaining and entries.")
+        if not isinstance(data["student"], str):
+            raise ValueError("Saved student must be a string.")
+        remaining = data["remaining"]
+        if not isinstance(remaining, int) or isinstance(remaining, bool) or remaining < 0:
+            raise ValueError("Saved remaining litres must be a non-negative whole number.")
+        if not isinstance(data["entries"], list):
+            raise ValueError("Saved entries must be a list.")
+
+        entries = []
+        for saved_entry in data["entries"]:
+            if not isinstance(saved_entry, dict) or set(saved_entry) != {"choice", "cost"}:
+                raise ValueError("Each saved entry must contain choice and cost.")
+            cost = saved_entry["cost"]
+            if not isinstance(cost, int) or isinstance(cost, bool) or cost < 0:
+                raise ValueError("Saved costs must be non-negative whole numbers.")
+            choice = cls._choice_from_data(saved_entry["choice"])
+            entries.append({"choice": choice, "cost": cost})
+
+        session = cls(data["student"], remaining)
+        session._entries = entries
+        return session
 
     def book(self, choice):
         needed = choice.water_needed()  # Each choice knows its own calculation.
