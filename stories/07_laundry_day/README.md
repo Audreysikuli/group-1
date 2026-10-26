@@ -37,7 +37,7 @@ No extra packages are needed. The whole story prints without asking for input. C
 
 **Act 1: WaterTank.** This object owns the remaining litres. The property setter checks the starting value and later assignments. `use()` refuses an amount that does not fit before changing anything. A double underscore changes the internal attribute name; it is not a password lock.
 
-**Act 2: LaundryChoice.** This abstract class requires `water_needed()`. `MachineWash` calculates a requirement from a quantity; `HandRinse` uses a fixed requirement. Each choice inherits its name and description interface. `super().__init__()` reuses common setup. Quantities must be positive whole numbers.
+**Act 2: LaundryChoice.** This abstract class requires `water_needed()`. `MachineWash` calculates a requirement from a quantity; `HandRinse` uses a fixed requirement; and `DuvetWash` calculates a requirement from the number of duvets. Each choice inherits its name and description interface. `super().__init__()` reuses common setup. Quantities must be positive whole numbers.
 
 **Act 3: specialised choices.** `EcoWash` reuses its parent's calculation and adjusts it. `FeaturedEcoWash` combines this class with `LaundryHype`. The mixin adds a cheerful description. `SunDry` has no shared parent but supplies the methods the caller needs. That is duck typing.
 
@@ -57,6 +57,7 @@ The quantities and units are deliberately simple. Integer division `//` rounds d
 classDiagram
     LaundryChoice <|-- MachineWash
     LaundryChoice <|-- HandRinse
+    LaundryChoice <|-- DuvetWash
     MachineWash <|-- EcoWash
     EcoWash <|-- FeaturedEcoWash
     LaundryHype <|-- FeaturedEcoWash
@@ -78,7 +79,7 @@ A triangle points to a parent. A filled diamond means an owned component. A plai
 | Getter and validating setter | The `remaining` property, also used during construction |
 | Read-only property | `completed_count` is derived from history and has no setter |
 | Public / `_` / `__` | Public operations, `_entries`, and the name-mangled resource value |
-| Single and hierarchical inheritance | Two concrete children of `LaundryChoice` |
+| Single and hierarchical inheritance | Concrete children of `LaundryChoice` |
 | Multilevel inheritance | `LaundryChoice → MachineWash → EcoWash` |
 | Multiple and hybrid inheritance | `FeaturedEcoWash(LaundryHype, EcoWash)` |
 | Overriding and `super()` | Specialised requirement and added description |
