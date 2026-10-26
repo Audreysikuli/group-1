@@ -25,6 +25,12 @@ class WaterTank:
         self.remaining = self.remaining - amount
         return True
 
+    def add_more(self, amount):
+        if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0:
+            return False
+        self.remaining = self.remaining + amount
+        return True
+
 
 # ACT 2: The abstract family says what every concrete choice must provide.
 class LaundryChoice(ABC):
