@@ -86,6 +86,17 @@ class SunDry:  # No shared parent: callers use its matching behaviour.
         return "Sun drying: 0 litres in this classroom model."
 
 
+class ClothesAirer:
+    def __init__(self):
+        self.name = "Clothes airer"
+
+    def describe(self):
+        return f"{self.name}: 0 litres in this classroom model."
+
+    def water_needed(self):
+        return 0
+
+
 # ACT 4: The coordinator HAS-A resource, and USES-A chosen object.
 class LaundrySession:
     def __init__(self, student, amount):
